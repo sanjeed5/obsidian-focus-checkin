@@ -1,4 +1,4 @@
-import { Notice, Plugin, PluginSettingTab, Setting, moment } from 'obsidian';
+import { Notice, Plugin, PluginSettingTab, Setting, moment, TFile } from 'obsidian';
 
 interface FocusCheckinSettings {
 	intervalMinutes: number;
@@ -208,15 +208,21 @@ export default class FocusCheckinPlugin extends Plugin {
 		const dailyNotePath = `${this.settings.dailyNotesPath}/${year}/${date}.md`;
 		const file = this.app.vault.getAbstractFileByPath(dailyNotePath);
 		
-		if (!file) {
+		if (!file || !(file instanceof TFile)) {
+			const internalPlugins = (this.app as any).internalPlugins;
+			const dailyNotesPlugin = internalPlugins?.plugins?.["daily-notes"];
+			if (dailyNotesPlugin?.enabled) {
+				const commands = (this.app as any).commands;
+				await commands.executeCommandById('daily-notes-plugin:open-daily-note');
+				return;
+			}
 			new Notice(`⚠️ Daily note not found: ${dailyNotePath}`, 5000);
 			this.sendSystemNotification('Focus Check-in', `Daily note not found: ${date}.md`);
 			return;
 		}
 		
 		// Open the file
-		const leaf = this.app.workspace.getLeaf(false);
-		await leaf.openFile(file as any);
+		await this.app.workspace.getLeaf(true).openFile(file);
 	}
 
 	private updateStatusBar() {
