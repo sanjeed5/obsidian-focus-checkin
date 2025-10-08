@@ -5,13 +5,15 @@ interface FocusCheckinSettings {
 	preAlertSeconds: number;
 	enabled: boolean;
 	dailyNotesPath: string;
+	autoOpenDailyNote: boolean;
 }
 
 const DEFAULT_SETTINGS: FocusCheckinSettings = {
 	intervalMinutes: 30,
 	preAlertSeconds: 30,
 	enabled: false,
-	dailyNotesPath: 'Daily Notes'
+	dailyNotesPath: 'Daily Notes',
+	autoOpenDailyNote: true
 }
 
 export default class FocusCheckinPlugin extends Plugin {
@@ -193,8 +195,9 @@ export default class FocusCheckinPlugin extends Plugin {
 		new Notice('⏰ Time to log your focus!', 5000);
 		this.sendSystemNotification('Focus Check-in', '⏰ Time to log your focus!');
 		
-		// Open today's daily note
-		await this.openTodaysDailyNote();
+		if (this.settings.autoOpenDailyNote) {
+			await this.openTodaysDailyNote();
+		}
 	}
 
 	private async openTodaysDailyNote() {
@@ -316,6 +319,16 @@ class FocusCheckinSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.dailyNotesPath)
 				.onChange(async (value) => {
 					this.plugin.settings.dailyNotesPath = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Auto-open daily note')
+			.setDesc('Automatically open today\'s daily note when it\'s time to check in')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.autoOpenDailyNote)
+				.onChange(async (value) => {
+					this.plugin.settings.autoOpenDailyNote = value;
 					await this.plugin.saveSettings();
 				}));
 
