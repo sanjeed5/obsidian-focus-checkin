@@ -16,7 +16,8 @@ const DEFAULT_SETTINGS: FocusCheckinSettings = {
 
 export default class FocusCheckinPlugin extends Plugin {
 	settings: FocusCheckinSettings;
-	private checkinIntervalId: number | null = null;
+	private preAlertTimeoutId: number | null = null;
+	private checkinTimeoutId: number | null = null;
 	private statusBarItem: HTMLElement;
 
 	// Send a system notification using Electron
@@ -129,54 +130,52 @@ export default class FocusCheckinPlugin extends Plugin {
 		this.saveSettings();
 		this.updateStatusBar();
 
-		// Clear scheduled timer
-		if (this.checkinIntervalId !== null) {
-			window.clearInterval(this.checkinIntervalId);
-			this.checkinIntervalId = null;
-		}
+		this.clearTimers();
 
 		new Notice('Focus check-in stopped');
 		this.sendSystemNotification('Focus Check-in Stopped', 'No more reminders');
 	}
 
 	private scheduleFocusCheckin() {
-		// Clear any existing timer
-		if (this.checkinIntervalId !== null) {
-			window.clearInterval(this.checkinIntervalId);
-		}
+		this.clearTimers();
 
 		const intervalMs = this.settings.intervalMinutes * 60 * 1000;
-		const preAlertMs = this.settings.preAlertSeconds * 1000;
+		const preAlertMs = Math.max(0, this.settings.preAlertSeconds * 1000);
 
-		const doCheckin = () => {
-			// Pre-alert notification
-			if (this.settings.preAlertSeconds > 0) {
-				setTimeout(() => {
+		const runCycle = () => {
+			if (!this.settings.enabled) {
+				return;
+			}
+
+			if (preAlertMs > 0 && preAlertMs < intervalMs) {
+				this.preAlertTimeoutId = window.setTimeout(() => {
 					new Notice(`Focus check-in coming up in ${this.settings.preAlertSeconds}s`, 5000);
 					this.sendSystemNotification('Focus Prep', `Check-in coming up in ${this.settings.preAlertSeconds} seconds`);
+					this.preAlertTimeoutId = null;
 				}, intervalMs - preAlertMs);
 			}
 
-			// Main check-in notification and open daily note
-			setTimeout(() => {
-				this.performCheckin();
+			this.checkinTimeoutId = window.setTimeout(async () => {
+				this.checkinTimeoutId = null;
+				await this.performCheckin();
+				runCycle();
 			}, intervalMs);
 		};
 
-		// First check-in
-		doCheckin();
+		runCycle();
 
-		// Register interval for repeated check-ins
-		this.checkinIntervalId = window.setInterval(() => {
-			doCheckin();
-		}, intervalMs);
+		this.register(() => this.clearTimers());
+	}
 
-		// Register for cleanup
-		this.register(() => {
-			if (this.checkinIntervalId !== null) {
-				window.clearInterval(this.checkinIntervalId);
-			}
-		});
+	private clearTimers() {
+		if (this.preAlertTimeoutId !== null) {
+			window.clearTimeout(this.preAlertTimeoutId);
+			this.preAlertTimeoutId = null;
+		}
+		if (this.checkinTimeoutId !== null) {
+			window.clearTimeout(this.checkinTimeoutId);
+			this.checkinTimeoutId = null;
+		}
 	}
 
 	private async performCheckin() {
