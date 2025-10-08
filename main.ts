@@ -228,12 +228,19 @@ export default class FocusCheckinPlugin extends Plugin {
 	}
 
 	private async openObsidianUrl(url: string) {
+		const electron = (window as any).require?.('electron');
+		if (electron?.shell?.openExternal) {
+			await electron.shell.openExternal(url);
+			return;
+		}
+
 		const openWithDefaultApp = (this.app as any).openWithDefaultApp;
 		if (typeof openWithDefaultApp === 'function') {
 			await openWithDefaultApp.call(this.app, url);
-		} else {
-			window.open(url);
+			return;
 		}
+
+		window.open(url);
 	}
 
 	private updateStatusBar() {
