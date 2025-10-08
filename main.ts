@@ -13,7 +13,7 @@ const DEFAULT_SETTINGS: FocusCheckinSettings = {
 	preAlertSeconds: 30,
 	enabled: false,
 	dailyNotesPath: 'Daily Notes',
-	autoOpenDailyNote: true
+	autoOpenDailyNote: false
 }
 
 export default class FocusCheckinPlugin extends Plugin {
