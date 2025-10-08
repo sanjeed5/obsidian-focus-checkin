@@ -8,14 +8,18 @@ A simple Obsidian plugin that helps you maintain focus by sending periodic remin
 - ⏰ **Customizable intervals** - Set check-ins from 1 minute to hours
 - 📢 **Pre-alerts** - Get a warning before the main check-in notification
 - 📝 **Optional daily note opening** - Choose whether to open your daily note when it's time to log
-- 🎯 **Status bar indicator** - See at a glance if focus check-ins are active
-- ⚙️ **Easy controls** - Start/stop with a ribbon icon or keyboard commands
+- 🎯 **Live countdown timer** - Status bar shows real-time countdown to next check-in
+- 🔄 **Auto-start** - Automatically resumes check-ins when you reopen Obsidian (if previously enabled)
+- ⚙️ **Easy controls** - Start/stop with a ribbon icon, keyboard commands, or settings
 
 ## How It Works
 
 1. Enable the plugin and click the clock icon in the ribbon (or use the command palette)
 2. The plugin will send you periodic reminders at your chosen interval
-3. When a check-in notification appears, your daily note opens automatically
+3. When a check-in notification appears:
+   - System notifications appear even when Obsidian is in the background
+   - Your daily note opens automatically (if enabled in settings)
+   - The status bar shows a live countdown to the next check-in
 4. Log what you're working on, then get back to it!
 
 ## Installation
@@ -40,7 +44,9 @@ Go to **Settings → Focus Check-in** to configure:
 - **Check-in interval** - How often to remind you (default: 30 minutes)
 - **Pre-alert time** - Warning notification before check-in (default: 30 seconds, set to 0 to disable)
 - **Daily notes path** - Where your daily notes are stored (default: `Daily Notes`)
+  - **Note**: Daily notes should be organized as `Daily Notes/YYYY/YYYY-MM-DD.md` (e.g., `Daily Notes/2025/2025-10-08.md`)
 - **Auto-open daily note** - Toggle whether today's note opens automatically (default: off)
+- **Focus check-in status** - Start/stop button to control check-ins directly from settings
 
 ## Usage
 
@@ -49,25 +55,32 @@ Go to **Settings → Focus Check-in** to configure:
 - Click the **clock icon** in the left ribbon
 - Or use Command Palette: "Start focus check-in"
 - Or use Command Palette: "Toggle focus check-in"
+- Or use the **Start** button in Settings → Focus Check-in
 
 ### Stopping Focus Check-ins
 
 - Click the **clock icon** again
 - Or use Command Palette: "Stop focus check-in"
 - Or use Command Palette: "Toggle focus check-in"
+- Or use the **Stop** button in Settings → Focus Check-in
+
+### Testing Notifications
+
+- Use Command Palette: "Test system notification" to verify notifications work on your system
 
 ### Status
 
 Check the status bar at the bottom of Obsidian:
-- 🎯 **Focus: ON (30m)** - Check-ins are active
+- 🎯 **Focus: 29m 45s** - Live countdown to next check-in (updates every second)
 - 🎯 **Focus: OFF** - Check-ins are stopped
 
 ## Tips
 
 - **Start with short intervals** - Try 15-30 minutes and adjust based on your workflow
-- **Test it first** - Set a 1-minute interval to make sure notifications work for you
-- **Create daily notes ahead of time** - The plugin will warn you if it can't find today's note
+- **Test it first** - Set a 1-minute interval or use "Test system notification" command to verify notifications work
+- **Organize daily notes properly** - Keep notes in `Daily Notes/YYYY/YYYY-MM-DD.md` format for the plugin to find them
 - **Use pre-alerts** - The 30-second warning helps you finish your current thought before logging
+- **Watch the countdown** - The status bar updates every second to show exactly when your next check-in is coming
 
 ## Compatibility
 
@@ -108,9 +121,11 @@ pnpm run dev
 focus-checkin/
 ├── main.ts           # Plugin entry point and main logic
 ├── manifest.json     # Plugin metadata
+├── styles.css        # Plugin styles
 ├── package.json      # Node.js dependencies
 ├── tsconfig.json     # TypeScript configuration
 ├── esbuild.config.mjs # Build configuration
+├── versions.json     # Version history
 └── README.md         # This file
 ```
 
