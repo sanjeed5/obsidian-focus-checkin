@@ -7,7 +7,7 @@ A simple Obsidian plugin that helps you maintain focus by sending periodic remin
 - 🔔 **System notifications** that appear even when Obsidian is in the background
 - ⏰ **Customizable intervals** - Set check-ins from 1 minute to hours
 - 📢 **Pre-alerts** - Get a warning before the main check-in notification
-- 📝 **Auto-open daily notes** - Automatically opens your daily note when it's time to log
+- 📝 **Optional daily note opening** - Choose whether to open your daily note when it's time to log
 - 🎯 **Status bar indicator** - See at a glance if focus check-ins are active
 - ⚙️ **Easy controls** - Start/stop with a ribbon icon or keyboard commands
 
@@ -40,6 +40,7 @@ Go to **Settings → Focus Check-in** to configure:
 - **Check-in interval** - How often to remind you (default: 30 minutes)
 - **Pre-alert time** - Warning notification before check-in (default: 30 seconds, set to 0 to disable)
 - **Daily notes path** - Where your daily notes are stored (default: `Daily Notes`)
+- **Auto-open daily note** - Toggle whether today's note opens automatically (default: off)
 
 ## Usage
 
