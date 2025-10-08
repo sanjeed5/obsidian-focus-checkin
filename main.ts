@@ -207,22 +207,33 @@ export default class FocusCheckinPlugin extends Plugin {
 		// Try to find the daily note
 		const dailyNotePath = `${this.settings.dailyNotesPath}/${year}/${date}.md`;
 		const file = this.app.vault.getAbstractFileByPath(dailyNotePath);
+		const obsidianUrl = this.buildObsidianUrl([this.settings.dailyNotesPath, year, date]);
 		
 		if (!file || !(file instanceof TFile)) {
-			const internalPlugins = (this.app as any).internalPlugins;
-			const dailyNotesPlugin = internalPlugins?.plugins?.["daily-notes"];
-			if (dailyNotesPlugin?.enabled) {
-				const commands = (this.app as any).commands;
-				await commands.executeCommandById('daily-notes-plugin:open-daily-note');
-				return;
-			}
-			new Notice(`⚠️ Daily note not found: ${dailyNotePath}`, 5000);
-			this.sendSystemNotification('Focus Check-in', `Daily note not found: ${date}.md`);
+			await this.openObsidianUrl(obsidianUrl);
 			return;
 		}
 		
 		// Open the file
 		await this.app.workspace.getLeaf(true).openFile(file);
+		await this.openObsidianUrl(obsidianUrl);
+	}
+
+	private buildObsidianUrl(segments: string[]): string {
+		const vaultName = encodeURIComponent(this.app.vault.getName());
+		const encodedSegments = segments
+			.map(segment => segment.split('/').map(part => encodeURIComponent(part)).join('%2F'))
+			.join('%2F');
+		return `obsidian://open?vault=${vaultName}&file=${encodedSegments}`;
+	}
+
+	private async openObsidianUrl(url: string) {
+		const openWithDefaultApp = (this.app as any).openWithDefaultApp;
+		if (typeof openWithDefaultApp === 'function') {
+			await openWithDefaultApp.call(this.app, url);
+		} else {
+			window.open(url);
+		}
 	}
 
 	private updateStatusBar() {
