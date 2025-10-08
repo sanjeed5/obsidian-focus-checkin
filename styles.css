@@ -1,0 +1,11 @@
+/* Focus Check-in Plugin Styles */
+
+/* Status bar styling */
+.status-bar-item[aria-label*="Focus"] {
+	cursor: pointer;
+}
+
+.status-bar-item[aria-label*="Focus"]:hover {
+	background-color: var(--background-modifier-hover);
+}
+
