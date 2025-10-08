@@ -18,6 +18,8 @@ export default class FocusCheckinPlugin extends Plugin {
 	settings: FocusCheckinSettings;
 	private preAlertTimeoutId: number | null = null;
 	private checkinTimeoutId: number | null = null;
+	private statusRefreshIntervalId: number | null = null;
+	private nextCheckinAt: number | null = null;
 	private statusBarItem: HTMLElement;
 
 	// Send a system notification using Electron
@@ -131,6 +133,7 @@ export default class FocusCheckinPlugin extends Plugin {
 		this.updateStatusBar();
 
 		this.clearTimers();
+		this.nextCheckinAt = null;
 
 		new Notice('Focus check-in stopped');
 		this.sendSystemNotification('Focus Check-in Stopped', 'No more reminders');
@@ -146,6 +149,10 @@ export default class FocusCheckinPlugin extends Plugin {
 			if (!this.settings.enabled) {
 				return;
 			}
+
+			const now = Date.now();
+			this.nextCheckinAt = now + intervalMs;
+			this.ensureStatusRefresh();
 
 			if (preAlertMs > 0 && preAlertMs < intervalMs) {
 				this.preAlertTimeoutId = window.setTimeout(() => {
@@ -175,6 +182,10 @@ export default class FocusCheckinPlugin extends Plugin {
 		if (this.checkinTimeoutId !== null) {
 			window.clearTimeout(this.checkinTimeoutId);
 			this.checkinTimeoutId = null;
+		}
+		if (this.statusRefreshIntervalId !== null) {
+			window.clearInterval(this.statusRefreshIntervalId);
+			this.statusRefreshIntervalId = null;
 		}
 	}
 
@@ -206,11 +217,33 @@ export default class FocusCheckinPlugin extends Plugin {
 	}
 
 	private updateStatusBar() {
-		if (this.settings.enabled) {
-			this.statusBarItem.setText(`🎯 Focus: ON (${this.settings.intervalMinutes}m)`);
-		} else {
-			this.statusBarItem.setText(`🎯 Focus: OFF`);
+		if (!this.settings.enabled) {
+			this.statusBarItem.setText('🎯 Focus: OFF');
+			return;
 		}
+
+		if (this.nextCheckinAt) {
+			const remainingMs = Math.max(0, this.nextCheckinAt - Date.now());
+			const totalSeconds = Math.ceil(remainingMs / 1000);
+			const minutes = Math.floor(totalSeconds / 60);
+			const seconds = totalSeconds % 60;
+			const formatted = minutes > 0 ? `${minutes}m ${seconds.toString().padStart(2, '0')}s` : `${seconds}s`;
+			this.statusBarItem.setText(`🎯 Focus: ${formatted}`);
+		} else {
+			this.statusBarItem.setText(`🎯 Focus: ON (${this.settings.intervalMinutes}m)`);
+		}
+	}
+
+	private ensureStatusRefresh() {
+		if (!this.statusRefreshIntervalId) {
+			this.statusRefreshIntervalId = window.setInterval(() => {
+				if (!this.settings.enabled) {
+					return;
+				}
+				this.updateStatusBar();
+			}, 1000);
+		}
+		this.updateStatusBar();
 	}
 
 	async loadSettings() {
