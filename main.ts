@@ -228,18 +228,40 @@ export default class FocusCheckinPlugin extends Plugin {
 	}
 
 	private async openObsidianUrl(url: string) {
-		const electron = (window as any).require?.('electron');
-		if (electron?.shell?.openExternal) {
-			await electron.shell.openExternal(url);
+		// Try Electron shell (desktop)
+		interface ElectronWindow extends Window {
+			require?: (module: string) => {
+				shell?: {
+					openExternal: (url: string) => Promise<void>;
+				};
+			};
+		}
+		
+		const electronWindow = window as ElectronWindow;
+		if (electronWindow.require) {
+			try {
+				const electron = electronWindow.require('electron');
+				if (electron?.shell?.openExternal) {
+					await electron.shell.openExternal(url);
+					return;
+				}
+			} catch (e) {
+				// Electron not available, continue to fallback
+			}
+		}
+
+		// Try Obsidian's internal method
+		interface ObsidianApp {
+			openWithDefaultApp?: (url: string) => Promise<void>;
+		}
+		
+		const obsidianApp = this.app as unknown as ObsidianApp;
+		if (typeof obsidianApp.openWithDefaultApp === 'function') {
+			await obsidianApp.openWithDefaultApp(url);
 			return;
 		}
 
-		const openWithDefaultApp = (this.app as any).openWithDefaultApp;
-		if (typeof openWithDefaultApp === 'function') {
-			await openWithDefaultApp.call(this.app, url);
-			return;
-		}
-
+		// Final fallback
 		window.open(url);
 	}
 
