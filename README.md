@@ -44,7 +44,8 @@ Go to **Settings → Focus Check-in** to configure:
 - **Check-in interval** - How often to remind you (default: 30 minutes)
 - **Pre-alert time** - Warning notification before check-in (default: 30 seconds, set to 0 to disable)
 - **Daily notes path** - Where your daily notes are stored (default: `Daily Notes`)
-  - **Note**: Daily notes should be organized as `Daily Notes/YYYY/YYYY-MM-DD.md` (e.g., `Daily Notes/2025/2025-10-08.md`)
+  - **Note**: Currently expects notes organized as `Daily Notes/YYYY/YYYY-MM-DD.md` (e.g., `Daily Notes/2025/2025-10-08.md`)
+  - Customizable date format coming in a future update (see Roadmap below)
 - **Auto-open daily note** - Toggle whether today's note opens automatically (default: off)
 - **Focus check-in status** - Start/stop button to control check-ins directly from settings
 
@@ -82,7 +83,6 @@ Check the status bar at the bottom of Obsidian:
 
 - **Desktop**: ✅ macOS, Windows, Linux
 - **Mobile**: ❌ Not supported (plugin uses desktop-only features)
-- **Minimum Obsidian version**: 0.15.0
 
 ## Privacy
 
@@ -91,6 +91,17 @@ This plugin:
 - ✅ Does not collect any data
 - ✅ Does not make any network requests
 - ✅ Only accesses your daily notes folder as configured
+
+## Roadmap
+
+Features planned for future releases:
+
+- **Customizable daily note format** - Configure your own date format and folder structure for daily notes (currently expects `Daily Notes/YYYY/YYYY-MM-DD.md`)
+- **Flexible note templates** - Support for different daily note organizational patterns
+- **Custom notification sounds** - Choose your own notification sound
+- **Check-in statistics** - Track your focus check-in completion rate over time
+
+Have a feature request? [Open an issue](https://github.com/sanjeed5/obsidian-focus-checkin/issues) and let us know!
 
 ## Development
 
