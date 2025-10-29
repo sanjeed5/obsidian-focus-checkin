@@ -1,4 +1,22 @@
-import { Notice, Plugin, PluginSettingTab, Setting, moment, TFile, normalizePath } from 'obsidian';
+import { Notice, Plugin, PluginSettingTab, Setting, moment, TFile, normalizePath, type App } from 'obsidian';
+
+// Type definitions for Electron APIs
+interface ElectronShell {
+	openExternal(url: string): Promise<void>;
+}
+
+interface ElectronRemote {
+	shell: ElectronShell;
+}
+
+interface WindowWithRequire extends Window {
+	require?: (module: string) => ElectronRemote;
+}
+
+// Extend App interface for internal methods
+interface AppWithInternalMethods {
+	openWithDefaultApp?: (url: string) => Promise<void>;
+}
 
 interface FocusCheckinSettings {
 	intervalMinutes: number;
@@ -218,15 +236,16 @@ export default class FocusCheckinPlugin extends Plugin {
 	}
 
 	private async openObsidianUrl(url: string) {
-		const electron = (window as any).require?.('electron');
+		const windowWithRequire = window as WindowWithRequire;
+		const electron = windowWithRequire.require?.('electron');
 		if (electron?.shell?.openExternal) {
 			await electron.shell.openExternal(url);
 			return;
 		}
 
-		const openWithDefaultApp = (this.app as any).openWithDefaultApp;
-		if (typeof openWithDefaultApp === 'function') {
-			await openWithDefaultApp.call(this.app, url);
+		const appWithInternal = this.app as unknown as AppWithInternalMethods;
+		if (typeof appWithInternal.openWithDefaultApp === 'function') {
+			await appWithInternal.openWithDefaultApp(url);
 			return;
 		}
 
@@ -275,7 +294,7 @@ export default class FocusCheckinPlugin extends Plugin {
 class FocusCheckinSettingTab extends PluginSettingTab {
 	plugin: FocusCheckinPlugin;
 
-	constructor(app: any, plugin: FocusCheckinPlugin) {
+	constructor(app: App, plugin: FocusCheckinPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -297,7 +316,7 @@ class FocusCheckinSettingTab extends PluginSettingTab {
 				.setValue(String(this.plugin.settings.intervalMinutes))
 				.onChange(async (value) => {
 					const num = Number(value);
-					if (!isNaN(num) && num > 0) {
+					if (!Number.isNaN(num) && num > 0) {
 						this.plugin.settings.intervalMinutes = num;
 						await this.plugin.saveSettings();
 						
@@ -317,7 +336,7 @@ class FocusCheckinSettingTab extends PluginSettingTab {
 				.setValue(String(this.plugin.settings.preAlertSeconds))
 				.onChange(async (value) => {
 					const num = Number(value);
-					if (!isNaN(num) && num >= 0) {
+					if (!Number.isNaN(num) && num >= 0) {
 						this.plugin.settings.preAlertSeconds = num;
 						await this.plugin.saveSettings();
 					}
