@@ -1,4 +1,4 @@
-import { Notice, Plugin, PluginSettingTab, Setting, moment, TFile } from 'obsidian';
+import { Notice, Plugin, PluginSettingTab, Setting, moment, TFile, normalizePath } from 'obsidian';
 
 interface FocusCheckinSettings {
 	intervalMinutes: number;
@@ -75,16 +75,6 @@ export default class FocusCheckinPlugin extends Plugin {
 			id: 'toggle-focus-checkin',
 			name: 'Toggle focus check-in',
 			callback: () => this.toggleFocusCheckin()
-		});
-
-		// Add test commands
-		this.addCommand({
-			id: 'test-system-notification',
-			name: 'Test system notification',
-			callback: () => {
-				new Notice('Sending test system notification...', 3000);
-				this.sendSystemNotification('Focus Check-in', '🎯 Test notification!');
-			}
 		});
 
 		// Add settings tab
@@ -205,7 +195,7 @@ export default class FocusCheckinPlugin extends Plugin {
 		const year = moment().format('YYYY');
 		
 		// Try to find the daily note
-		const dailyNotePath = `${this.settings.dailyNotesPath}/${year}/${date}.md`;
+		const dailyNotePath = normalizePath(`${this.settings.dailyNotesPath}/${year}/${date}.md`);
 		const file = this.app.vault.getAbstractFileByPath(dailyNotePath);
 		const obsidianUrl = this.buildObsidianUrl([this.settings.dailyNotesPath, year, date]);
 		
@@ -228,40 +218,18 @@ export default class FocusCheckinPlugin extends Plugin {
 	}
 
 	private async openObsidianUrl(url: string) {
-		// Try Electron shell (desktop)
-		interface ElectronWindow extends Window {
-			require?: (module: string) => {
-				shell?: {
-					openExternal: (url: string) => Promise<void>;
-				};
-			};
-		}
-		
-		const electronWindow = window as ElectronWindow;
-		if (electronWindow.require) {
-			try {
-				const electron = electronWindow.require('electron');
-				if (electron?.shell?.openExternal) {
-					await electron.shell.openExternal(url);
-					return;
-				}
-			} catch (e) {
-				// Electron not available, continue to fallback
-			}
-		}
-
-		// Try Obsidian's internal method
-		interface ObsidianApp {
-			openWithDefaultApp?: (url: string) => Promise<void>;
-		}
-		
-		const obsidianApp = this.app as unknown as ObsidianApp;
-		if (typeof obsidianApp.openWithDefaultApp === 'function') {
-			await obsidianApp.openWithDefaultApp(url);
+		const electron = (window as any).require?.('electron');
+		if (electron?.shell?.openExternal) {
+			await electron.shell.openExternal(url);
 			return;
 		}
 
-		// Final fallback
+		const openWithDefaultApp = (this.app as any).openWithDefaultApp;
+		if (typeof openWithDefaultApp === 'function') {
+			await openWithDefaultApp.call(this.app, url);
+			return;
+		}
+
 		window.open(url);
 	}
 
@@ -315,8 +283,6 @@ class FocusCheckinSettingTab extends PluginSettingTab {
 	display(): void {
 		const {containerEl} = this;
 		containerEl.empty();
-
-		containerEl.createEl('h2', {text: 'Focus Check-in Settings'});
 
 		containerEl.createEl('p', {
 			text: 'Get periodic reminders to check in on your focus and log it in your daily note.',
@@ -378,7 +344,9 @@ class FocusCheckinSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		containerEl.createEl('h3', {text: 'Control'});
+		new Setting(containerEl)
+			.setName('Control')
+			.setHeading();
 
 		new Setting(containerEl)
 			.setName('Focus check-in status')
