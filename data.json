@@ -1,6 +1,7 @@
 {
-  "intervalMinutes": 30,
-  "preAlertSeconds": 30,
+  "intervalMinutes": 25,
+  "preAlertSeconds": 15,
   "enabled": true,
-  "dailyNotesPath": "Daily Notes"
+  "dailyNotesPath": "Daily Notes",
+  "autoOpenDailyNote": true
 }

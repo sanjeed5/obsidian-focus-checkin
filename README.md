@@ -64,10 +64,6 @@ Go to **Settings → Focus Check-in** to configure:
 - Or use Command Palette: "Toggle focus check-in"
 - Or use the **Stop** button in Settings → Focus Check-in
 
-### Testing Notifications
-
-- Use Command Palette: "Test system notification" to verify notifications work on your system
-
 ### Status
 
 Check the status bar at the bottom of Obsidian:
@@ -77,7 +73,7 @@ Check the status bar at the bottom of Obsidian:
 ## Tips
 
 - **Start with short intervals** - Try 15-30 minutes and adjust based on your workflow
-- **Test it first** - Set a 1-minute interval or use "Test system notification" command to verify notifications work
+- **Test it first** - Set a 1-minute interval to verify notifications work on your system
 - **Organize daily notes properly** - Keep notes in `Daily Notes/YYYY/YYYY-MM-DD.md` format for the plugin to find them
 - **Use pre-alerts** - The 30-second warning helps you finish your current thought before logging
 - **Watch the countdown** - The status bar updates every second to show exactly when your next check-in is coming
@@ -85,7 +81,7 @@ Check the status bar at the bottom of Obsidian:
 ## Compatibility
 
 - **Desktop**: ✅ macOS, Windows, Linux
-- **Mobile**: ✅ iOS, Android
+- **Mobile**: ❌ Not supported (plugin uses desktop-only features)
 - **Minimum Obsidian version**: 0.15.0
 
 ## Privacy
