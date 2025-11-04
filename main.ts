@@ -52,11 +52,15 @@ export default class FocusCheckinPlugin extends Plugin {
 					requireInteraction: false
 				});
 			} else if (Notification.permission !== 'denied') {
-				Notification.requestPermission().then(permission => {
-					if (permission === 'granted') {
-						new Notification(title, { body: body });
-					}
-				});
+				void Notification.requestPermission()
+					.then(permission => {
+						if (permission === 'granted') {
+							new Notification(title, { body: body });
+						}
+					})
+					.catch(error => {
+						console.error('Focus check-in: failed to request notification permission', error);
+					});
 			}
 		} else {
 			// Fallback to in-app notification
@@ -72,26 +76,26 @@ export default class FocusCheckinPlugin extends Plugin {
 		this.updateStatusBar();
 
 		// Add ribbon icon to start/stop
-		this.addRibbonIcon('clock', 'Toggle Focus Check-in', () => {
+		this.addRibbonIcon('clock', 'Toggle focus check-in', () => {
 			this.toggleFocusCheckin();
 		});
 
 		// Add commands
 		this.addCommand({
-			id: 'start-focus-checkin',
-			name: 'Start focus check-in',
+			id: 'start-checkin-timer',
+			name: 'Start check-in timer',
 			callback: () => this.startFocusCheckin()
 		});
 
 		this.addCommand({
-			id: 'stop-focus-checkin',
-			name: 'Stop focus check-in',
+			id: 'stop-checkin-timer',
+			name: 'Stop check-in timer',
 			callback: () => this.stopFocusCheckin()
 		});
 
 		this.addCommand({
-			id: 'toggle-focus-checkin',
-			name: 'Toggle focus check-in',
+			id: 'toggle-checkin-timer',
+			name: 'Toggle check-in timer',
 			callback: () => this.toggleFocusCheckin()
 		});
 
@@ -123,11 +127,11 @@ export default class FocusCheckinPlugin extends Plugin {
 		}
 
 		this.settings.enabled = true;
-		this.saveSettings();
+		void this.saveSettings();
 		this.updateStatusBar();
 
 		new Notice(`🎯 Focus check-in started (every ${this.settings.intervalMinutes} min)`);
-		this.sendSystemNotification('Focus Check-in Started', `Check-ins every ${this.settings.intervalMinutes} minutes`);
+		this.sendSystemNotification('Focus check-in started', `Check-ins every ${this.settings.intervalMinutes} minutes`);
 		
 		this.scheduleFocusCheckin();
 	}
@@ -139,14 +143,14 @@ export default class FocusCheckinPlugin extends Plugin {
 		}
 
 		this.settings.enabled = false;
-		this.saveSettings();
+		void this.saveSettings();
 		this.updateStatusBar();
 
 		this.clearTimers();
 		this.nextCheckinAt = null;
 
 		new Notice('Focus check-in stopped');
-		this.sendSystemNotification('Focus Check-in Stopped', 'No more reminders');
+		this.sendSystemNotification('Focus check-in stopped', 'No more reminders');
 	}
 
 	private scheduleFocusCheckin() {
@@ -167,15 +171,20 @@ export default class FocusCheckinPlugin extends Plugin {
 			if (preAlertMs > 0 && preAlertMs < intervalMs) {
 				this.preAlertTimeoutId = window.setTimeout(() => {
 					new Notice(`Focus check-in coming up in ${this.settings.preAlertSeconds}s`, 5000);
-					this.sendSystemNotification('Focus Prep', `Check-in coming up in ${this.settings.preAlertSeconds} seconds`);
+					this.sendSystemNotification('Focus prep', `Check-in coming up in ${this.settings.preAlertSeconds} seconds`);
 					this.preAlertTimeoutId = null;
 				}, intervalMs - preAlertMs);
 			}
 
-			this.checkinTimeoutId = window.setTimeout(async () => {
+			this.checkinTimeoutId = window.setTimeout(() => {
 				this.checkinTimeoutId = null;
-				await this.performCheckin();
-				runCycle();
+				void this.performCheckin()
+					.catch(error => {
+						console.error('Focus check-in: failed to complete check-in', error);
+					})
+					.finally(() => {
+						runCycle();
+					});
 			}, intervalMs);
 		};
 
@@ -201,7 +210,7 @@ export default class FocusCheckinPlugin extends Plugin {
 
 	private async performCheckin() {
 		new Notice('⏰ Time to log your focus!', 5000);
-		this.sendSystemNotification('Focus Check-in', '⏰ Time to log your focus!');
+		this.sendSystemNotification('Focus check-in reminder', '⏰ Time to log your focus!');
 		
 		if (this.settings.autoOpenDailyNote) {
 			await this.openTodaysDailyNote();
@@ -254,7 +263,7 @@ export default class FocusCheckinPlugin extends Plugin {
 
 	private updateStatusBar() {
 		if (!this.settings.enabled) {
-			this.statusBarItem.setText('🎯 Focus: OFF');
+			this.statusBarItem.setText('🎯 Focus: off');
 			return;
 		}
 
@@ -266,7 +275,7 @@ export default class FocusCheckinPlugin extends Plugin {
 			const formatted = minutes > 0 ? `${minutes}m ${seconds.toString().padStart(2, '0')}s` : `${seconds}s`;
 			this.statusBarItem.setText(`🎯 Focus: ${formatted}`);
 		} else {
-			this.statusBarItem.setText(`🎯 Focus: ON (${this.settings.intervalMinutes}m)`);
+			this.statusBarItem.setText(`🎯 Focus: on (${this.settings.intervalMinutes}m)`);
 		}
 	}
 
@@ -346,7 +355,7 @@ class FocusCheckinSettingTab extends PluginSettingTab {
 			.setName('Daily notes path')
 			.setDesc('Path to your daily notes folder (relative to vault root)')
 			.addText(text => text
-				.setPlaceholder('Daily Notes')
+				.setPlaceholder('Daily notes')
 				.setValue(this.plugin.settings.dailyNotesPath)
 				.onChange(async (value) => {
 					this.plugin.settings.dailyNotesPath = value;
