@@ -55,31 +55,31 @@ export default class FocusCheckinPlugin extends Plugin {
 
 		// Add ribbon icon to start/stop
 		this.addRibbonIcon('clock', 'Toggle Focus Check-in', () => {
-			this.toggleFocusCheckin();
+			void this.toggleFocusCheckin();
 		});
 
 		// Add commands
 		this.addCommand({
-			id: 'start-focus-checkin',
-			name: 'Start focus check-in',
-			callback: () => this.startFocusCheckin()
+			id: 'start-checkin',
+			name: 'Start check-in',
+			callback: () => void this.startFocusCheckin()
 		});
 
 		this.addCommand({
-			id: 'stop-focus-checkin',
-			name: 'Stop focus check-in',
-			callback: () => this.stopFocusCheckin()
+			id: 'stop-checkin',
+			name: 'Stop check-in',
+			callback: () => void this.stopFocusCheckin()
 		});
 
 		this.addCommand({
-			id: 'toggle-focus-checkin',
-			name: 'Toggle focus check-in',
-			callback: () => this.toggleFocusCheckin()
+			id: 'toggle-checkin',
+			name: 'Toggle check-in',
+			callback: () => void this.toggleFocusCheckin()
 		});
 
 		// Add test commands
 		this.addCommand({
-			id: 'test-system-notification',
+			id: 'test-notification',
 			name: 'Test system notification',
 			callback: () => {
 				new Notice('Sending test system notification...', 3000);
@@ -92,30 +92,30 @@ export default class FocusCheckinPlugin extends Plugin {
 
 		// Auto-start if enabled
 		if (this.settings.enabled) {
-			this.startFocusCheckin();
+			void this.startFocusCheckin();
 		}
 	}
 
 	onunload() {
-		this.stopFocusCheckin();
+		void this.stopFocusCheckin();
 	}
 
-	toggleFocusCheckin() {
+	async toggleFocusCheckin() {
 		if (this.settings.enabled) {
-			this.stopFocusCheckin();
+			await this.stopFocusCheckin();
 		} else {
-			this.startFocusCheckin();
+			await this.startFocusCheckin();
 		}
 	}
 
-	startFocusCheckin() {
+	async startFocusCheckin() {
 		if (this.settings.enabled) {
 			new Notice('Focus check-in is already running');
 			return;
 		}
 
 		this.settings.enabled = true;
-		this.saveSettings();
+		await this.saveSettings();
 		this.updateStatusBar();
 
 		new Notice(`🎯 Focus check-in started (every ${this.settings.intervalMinutes} min)`);
@@ -124,14 +124,14 @@ export default class FocusCheckinPlugin extends Plugin {
 		this.scheduleFocusCheckin();
 	}
 
-	stopFocusCheckin() {
+	async stopFocusCheckin() {
 		if (!this.settings.enabled) {
 			new Notice('Focus check-in is not running');
 			return;
 		}
 
 		this.settings.enabled = false;
-		this.saveSettings();
+		await this.saveSettings();
 		this.updateStatusBar();
 
 		this.clearTimers();
@@ -164,10 +164,12 @@ export default class FocusCheckinPlugin extends Plugin {
 				}, intervalMs - preAlertMs);
 			}
 
-			this.checkinTimeoutId = window.setTimeout(async () => {
-				this.checkinTimeoutId = null;
-				await this.performCheckin();
-				runCycle();
+			this.checkinTimeoutId = window.setTimeout(() => {
+				void (async () => {
+					this.checkinTimeoutId = null;
+					await this.performCheckin();
+					runCycle();
+				})();
 			}, intervalMs);
 		};
 
@@ -315,8 +317,9 @@ class FocusCheckinSettingTab extends PluginSettingTab {
 						
 						// Restart if currently running
 						if (this.plugin.settings.enabled) {
-							this.plugin.stopFocusCheckin();
-							this.plugin.startFocusCheckin();
+							void this.plugin.stopFocusCheckin().then(() => {
+								void this.plugin.startFocusCheckin();
+							});
 						}
 					}
 				}));
@@ -367,8 +370,9 @@ class FocusCheckinSettingTab extends PluginSettingTab {
 				.setButtonText(this.plugin.settings.enabled ? 'Stop' : 'Start')
 				.setCta()
 				.onClick(() => {
-					this.plugin.toggleFocusCheckin();
-					this.display(); // Refresh the settings display
+					void this.plugin.toggleFocusCheckin().then(() => {
+						this.display(); // Refresh the settings display
+					});
 				}));
 	}
 }
