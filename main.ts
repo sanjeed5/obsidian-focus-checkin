@@ -1,4 +1,4 @@
-import { Notice, Plugin, PluginSettingTab, Setting, moment, TFile } from 'obsidian';
+import { App, Notice, Plugin, PluginSettingTab, Setting, moment, TFile, MarkdownView, normalizePath } from 'obsidian';
 
 interface FocusCheckinSettings {
 	intervalMinutes: number;
@@ -24,7 +24,6 @@ export default class FocusCheckinPlugin extends Plugin {
 	private nextCheckinAt: number | null = null;
 	private statusBarItem: HTMLElement;
 
-	// Send a system notification using Electron
 	private sendSystemNotification(title: string, body: string) {
 		if (typeof Notification !== 'undefined') {
 			if (Notification.permission === 'granted') {
@@ -41,7 +40,6 @@ export default class FocusCheckinPlugin extends Plugin {
 				});
 			}
 		} else {
-			// Fallback to in-app notification
 			new Notice(`${title}: ${body}`, 5000);
 		}
 	}
@@ -49,16 +47,13 @@ export default class FocusCheckinPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// Add status bar item
 		this.statusBarItem = this.addStatusBarItem();
 		this.updateStatusBar();
 
-		// Add ribbon icon to start/stop
 		this.addRibbonIcon('clock', 'Toggle Focus Check-in', () => {
 			void this.toggleFocusCheckin();
 		});
 
-		// Add commands
 		this.addCommand({
 			id: 'start-checkin',
 			name: 'Start check-in',
@@ -77,7 +72,6 @@ export default class FocusCheckinPlugin extends Plugin {
 			callback: () => void this.toggleFocusCheckin()
 		});
 
-		// Add test commands
 		this.addCommand({
 			id: 'test-notification',
 			name: 'Test system notification',
@@ -87,17 +81,15 @@ export default class FocusCheckinPlugin extends Plugin {
 			}
 		});
 
-		// Add settings tab
 		this.addSettingTab(new FocusCheckinSettingTab(this.app, this));
 
-		// Auto-start if enabled
 		if (this.settings.enabled) {
 			void this.startFocusCheckin();
 		}
 	}
 
 	onunload() {
-		void this.stopFocusCheckin();
+		this.clearTimers();
 	}
 
 	async toggleFocusCheckin() {
@@ -196,29 +188,54 @@ export default class FocusCheckinPlugin extends Plugin {
 	private async performCheckin() {
 		new Notice('⏰ Time to log your focus!', 5000);
 		this.sendSystemNotification('Focus Check-in', '⏰ Time to log your focus!');
-		
+		this.bringToFront();
+
 		if (this.settings.autoOpenDailyNote) {
 			await this.openTodaysDailyNote();
+		}
+	}
+
+	private bringToFront() {
+		try {
+			const electron = (window as any).require?.('electron');
+			const win = electron?.remote?.getCurrentWindow();
+			if (win) {
+				win.show();
+				win.focus();
+			}
+		} catch {
+			// Not running in Electron desktop, ignore
 		}
 	}
 
 	private async openTodaysDailyNote() {
 		const date = moment().format('YYYY-MM-DD');
 		const year = moment().format('YYYY');
-		
-		// Try to find the daily note
-		const dailyNotePath = `${this.settings.dailyNotesPath}/${year}/${date}.md`;
+
+		const dailyNotePath = normalizePath(`${this.settings.dailyNotesPath}/${year}/${date}.md`);
 		const file = this.app.vault.getAbstractFileByPath(dailyNotePath);
-		const obsidianUrl = this.buildObsidianUrl([this.settings.dailyNotesPath, year, date]);
-		
+
 		if (!file || !(file instanceof TFile)) {
+			const obsidianUrl = this.buildObsidianUrl([this.settings.dailyNotesPath, year, date]);
 			await this.openObsidianUrl(obsidianUrl);
 			return;
 		}
-		
-		// Open the file
-		await this.app.workspace.getLeaf(true).openFile(file);
-		await this.openObsidianUrl(obsidianUrl);
+
+		const timestamp = moment().format('hh:mm A');
+		await this.app.vault.append(file, `\n- ${timestamp} - `);
+
+		this.revealOrOpenFile(file);
+	}
+
+	private revealOrOpenFile(file: TFile) {
+		const existingLeaf = this.app.workspace.getLeavesOfType('markdown')
+			.find(leaf => leaf.view instanceof MarkdownView && leaf.view.file?.path === file.path);
+
+		if (existingLeaf) {
+			this.app.workspace.setActiveLeaf(existingLeaf, { focus: true });
+		} else {
+			this.app.workspace.getLeaf(false).openFile(file);
+		}
 	}
 
 	private buildObsidianUrl(segments: string[]): string {
@@ -265,12 +282,12 @@ export default class FocusCheckinPlugin extends Plugin {
 
 	private ensureStatusRefresh() {
 		if (!this.statusRefreshIntervalId) {
-			this.statusRefreshIntervalId = window.setInterval(() => {
-				if (!this.settings.enabled) {
-					return;
-				}
-				this.updateStatusBar();
-			}, 1000);
+			this.statusRefreshIntervalId = this.registerInterval(
+				window.setInterval(() => {
+					if (!this.settings.enabled) return;
+					this.updateStatusBar();
+				}, 1000)
+			);
 		}
 		this.updateStatusBar();
 	}
@@ -287,7 +304,7 @@ export default class FocusCheckinPlugin extends Plugin {
 class FocusCheckinSettingTab extends PluginSettingTab {
 	plugin: FocusCheckinPlugin;
 
-	constructor(app: any, plugin: FocusCheckinPlugin) {
+	constructor(app: App, plugin: FocusCheckinPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -314,12 +331,10 @@ class FocusCheckinSettingTab extends PluginSettingTab {
 					if (!isNaN(num) && num > 0) {
 						this.plugin.settings.intervalMinutes = num;
 						await this.plugin.saveSettings();
-						
-						// Restart if currently running
+
 						if (this.plugin.settings.enabled) {
-							void this.plugin.stopFocusCheckin().then(() => {
-								void this.plugin.startFocusCheckin();
-							});
+							await this.plugin.stopFocusCheckin();
+							await this.plugin.startFocusCheckin();
 						}
 					}
 				}));
@@ -369,10 +384,9 @@ class FocusCheckinSettingTab extends PluginSettingTab {
 			.addButton(button => button
 				.setButtonText(this.plugin.settings.enabled ? 'Stop' : 'Start')
 				.setCta()
-				.onClick(() => {
-					void this.plugin.toggleFocusCheckin().then(() => {
-						this.display(); // Refresh the settings display
-					});
+				.onClick(async () => {
+					await this.plugin.toggleFocusCheckin();
+					this.display();
 				}));
 	}
 }
