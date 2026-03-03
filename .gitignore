@@ -16,6 +16,9 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Environment
+.env
+
 # OS
 Thumbs.db
 
